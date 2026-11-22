@@ -37,17 +37,27 @@ module euler_core #(
     localparam T_W    = $clog2(3 * N) + 1;
     localparam T_LAST = 3 * N - 3;            // last systolic step index
 
-    localparam OP_NOP = 3'd0, OP_LOAD_A = 3'd1, OP_LOAD_B = 3'd2, OP_RUN = 3'd3,
+    // op 0 is NOP: it falls through to the default branch below
+    localparam OP_LOAD_A = 3'd1, OP_LOAD_B = 3'd2, OP_RUN = 3'd3,
                OP_READ = 3'd4, OP_CLEAR = 3'd5, OP_CFG = 3'd6, OP_ID = 3'd7;
 
     localparam [7:0] CHIP_ID = 8'hE0;
+
+    // sized copies of N for width-clean comparisons and index math
+    localparam integer     N_I      = N;
+    localparam integer     LAST_I   = NN - 1;
+    localparam [T_W:0]     N_K      = N_I[T_W:0];
+    localparam [PTR_W-1:0] N_P      = N_I[PTR_W-1:0];
+    localparam [PTR_W-1:0] LAST_PTR = LAST_I[PTR_W-1:0];
 
     // ---------------------------------------------------------------- buffers
     reg [8*NN-1:0]   abuf;     // A[i][k] at byte (i*N + k)
     reg [8*NN-1:0]   bbuf;     // B[k][j] at byte (k*N + j)
     reg [PTR_W-1:0]  aptr, bptr, ridx;
     reg [1:0]        rbyte;
-    reg [7:0]        cfg;
+    /* verilator lint_off UNUSEDSIGNAL */
+    reg [7:0]        cfg;      // only bit 0 (ReLU) is used today; 7:1 reserved
+    /* verilator lint_on UNUSEDSIGNAL */
     reg              running;
     reg [T_W-1:0]    t;
 
@@ -62,8 +72,10 @@ module euler_core #(
     // b_bus[i][j] : weight entering PE(i,j) from above
     wire [8*N*N-1:0]     a_bus;
     wire [8*N*N-1:0]     b_bus;
-    wire [8*N*N-1:0]     a_fwd;
+    /* verilator lint_off UNUSEDSIGNAL */
+    wire [8*N*N-1:0]     a_fwd;    // last column's and last row's outputs leave the array
     wire [8*N*N-1:0]     b_fwd;
+    /* verilator lint_on UNUSEDSIGNAL */
     wire [ACC_W*NN-1:0]  acc_bus;
 
     genvar gi, gj;
@@ -72,22 +84,28 @@ module euler_core #(
             for (gj = 0; gj < N; gj = gj + 1) begin : g_col
                 localparam integer P = gi * N + gj;
 
-                // Left edge: skewed feed of A. Row i receives A[i][t-i].
+                // Left edge: skewed feed of A. Row i receives A[i][k], k = t - i.
+                // k is computed one bit wider than t: its top bit set means t < i.
                 if (gj == 0) begin : g_a_edge
-                    wire [T_W:0] k = {1'b0, t} - gi;
-                    wire in_rng = running && (t >= gi) && ((t - gi) < N);
-                    assign a_bus[8*P +: 8] =
-                        in_rng ? abuf[8*(gi*N + k[PTR_W-1:0]) +: 8] : 8'd0;
+                    localparam [T_W:0]     ROW      = gi;
+                    localparam integer     BASE_I   = gi * N;
+                    localparam [PTR_W-1:0] ROW_BASE = BASE_I[PTR_W-1:0];
+                    wire [T_W:0]     k      = {1'b0, t} - ROW;
+                    wire             in_rng = running && !k[T_W] && (k < N_K);
+                    wire [PTR_W-1:0] a_idx  = ROW_BASE + k[PTR_W-1:0];
+                    assign a_bus[8*P +: 8] = in_rng ? abuf[{a_idx, 3'b000} +: 8] : 8'd0;
                 end else begin : g_a_link
                     assign a_bus[8*P +: 8] = a_fwd[8*(P-1) +: 8];
                 end
 
-                // Top edge: skewed feed of B. Column j receives B[t-j][j].
+                // Top edge: skewed feed of B. Column j receives B[k][j], k = t - j.
                 if (gi == 0) begin : g_b_edge
-                    wire [T_W:0] k = {1'b0, t} - gj;
-                    wire in_rng = running && (t >= gj) && ((t - gj) < N);
-                    assign b_bus[8*P +: 8] =
-                        in_rng ? bbuf[8*(k[PTR_W-1:0]*N + gj) +: 8] : 8'd0;
+                    localparam [T_W:0]     COL   = gj;
+                    localparam [PTR_W-1:0] COL_P = gj;
+                    wire [T_W:0]     k      = {1'b0, t} - COL;
+                    wire             in_rng = running && !k[T_W] && (k < N_K);
+                    wire [PTR_W-1:0] b_idx  = k[PTR_W-1:0] * N_P + COL_P;
+                    assign b_bus[8*P +: 8] = in_rng ? bbuf[{b_idx, 3'b000} +: 8] : 8'd0;
                 end else begin : g_b_link
                     assign b_bus[8*P +: 8] = b_fwd[8*(P-N) +: 8];
                 end
@@ -142,11 +160,11 @@ module euler_core #(
                 case (op)
                     OP_LOAD_A: begin
                         abuf[8*aptr +: 8] <= din;
-                        aptr <= (aptr == NN-1) ? {PTR_W{1'b0}} : aptr + 1'b1;
+                        aptr <= (aptr == LAST_PTR) ? {PTR_W{1'b0}} : aptr + 1'b1;
                     end
                     OP_LOAD_B: begin
                         bbuf[8*bptr +: 8] <= din;
-                        bptr <= (bptr == NN-1) ? {PTR_W{1'b0}} : bptr + 1'b1;
+                        bptr <= (bptr == LAST_PTR) ? {PTR_W{1'b0}} : bptr + 1'b1;
                     end
                     OP_RUN: begin
                         running <= 1'b1;
@@ -159,7 +177,7 @@ module euler_core #(
                         dout <= res_byte;
                         if (rbyte == 2'd2) begin
                             rbyte <= 2'd0;
-                            ridx  <= (ridx == NN-1) ? {PTR_W{1'b0}} : ridx + 1'b1;
+                            ridx  <= (ridx == LAST_PTR) ? {PTR_W{1'b0}} : ridx + 1'b1;
                         end else begin
                             rbyte <= rbyte + 1'b1;
                         end
