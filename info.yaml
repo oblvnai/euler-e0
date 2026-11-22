@@ -7,9 +7,9 @@ project:
   language:     "Verilog"
   clock_hz:     50000000
 
-  # Synthesized cell area is ~18,600 um2 (sky130_fd_sc_hd). One tile is ~167x108 um,
-  # so 1x2 should fit at ~50% utilization. If the GDS action reports congestion, use "2x2".
-  tiles: "1x2"
+  # Synthesized cell area is ~18,500 um2 (sky130_fd_sc_hd). 1x2 failed detailed
+  # placement in the official flow (density ~99%), so the design uses 2x2 tiles.
+  tiles: "2x2"
 
   top_module:  "tt_um_planck_e0"
 
