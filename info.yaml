@@ -1,56 +1,53 @@
 # Tiny Tapeout project information
 project:
-  title:        ""      # Project title
-  author:       ""      # Your name
-  discord:      ""      # Your discord username, for communication and automatically assigning you a Tapeout role (optional)
-  description:  ""      # One line description of what your project does
-  language:     "Verilog" # other examples include SystemVerilog, Amaranth, VHDL, etc
-  clock_hz:     0       # Clock frequency in Hz (or 0 if not applicable)
+  title:        "Euler E0 - INT8 systolic matrix engine"
+  author:       "Planck Silicon (Josue Emanuel Gonzalez Nevares)"
+  discord:      ""
+  description:  "2x2 INT8 systolic-array matrix multiply with ReLU: one neural-network layer in hardware"
+  language:     "Verilog"
+  clock_hz:     50000000
 
-  # How many tiles your design occupies? A single tile is about 167x108 uM.
-  tiles: "1x1"          # Valid values: 1x1, 1x2, 2x2, 3x2, 4x2, 6x2 or 8x2
+  # Synthesized cell area is ~18,600 um2 (sky130_fd_sc_hd). One tile is ~167x108 um,
+  # so 1x2 should fit at ~50% utilization. If the GDS action reports congestion, use "2x2".
+  tiles: "1x2"
 
-  # Your top module name must start with "tt_um_". Make it unique by including your github username:
-  top_module:  "tt_um_example"
+  top_module:  "tt_um_planck_e0"
 
-  # List your project's source files here.
-  # Source files must be in ./src and you must list each source file separately, one per line.
-  # Don't forget to also update `PROJECT_SOURCES` in test/Makefile.
   source_files:
     - "project.v"
+    - "euler_core.v"
+    - "euler_pe.v"
 
-# The pinout of your project. Leave unused pins blank. DO NOT delete or add any pins.
-# This section is for the datasheet/website. Use descriptive names (e.g., RX, TX, MOSI, SCL, SEG_A, etc.).
 pinout:
   # Inputs
-  ui[0]: ""
-  ui[1]: ""
-  ui[2]: ""
-  ui[3]: ""
-  ui[4]: ""
-  ui[5]: ""
-  ui[6]: ""
-  ui[7]: ""
+  ui[0]: "DIN[0]"
+  ui[1]: "DIN[1]"
+  ui[2]: "DIN[2]"
+  ui[3]: "DIN[3]"
+  ui[4]: "DIN[4]"
+  ui[5]: "DIN[5]"
+  ui[6]: "DIN[6]"
+  ui[7]: "DIN[7]"
 
   # Outputs
-  uo[0]: ""
-  uo[1]: ""
-  uo[2]: ""
-  uo[3]: ""
-  uo[4]: ""
-  uo[5]: ""
-  uo[6]: ""
-  uo[7]: ""
+  uo[0]: "DOUT[0]"
+  uo[1]: "DOUT[1]"
+  uo[2]: "DOUT[2]"
+  uo[3]: "DOUT[3]"
+  uo[4]: "DOUT[4]"
+  uo[5]: "DOUT[5]"
+  uo[6]: "DOUT[6]"
+  uo[7]: "DOUT[7]"
 
   # Bidirectional pins
-  uio[0]: ""
-  uio[1]: ""
-  uio[2]: ""
+  uio[0]: "OP[0] (in)"
+  uio[1]: "OP[1] (in)"
+  uio[2]: "OP[2] (in)"
   uio[3]: ""
   uio[4]: ""
-  uio[5]: ""
-  uio[6]: ""
-  uio[7]: ""
+  uio[5]: "BUSY (out)"
+  uio[6]: "DONE (out)"
+  uio[7]: "VALID (in)"
 
 # Do not change!
 yaml_version: 6

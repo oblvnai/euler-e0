@@ -1,42 +1,28 @@
-![](../../workflows/gds/badge.svg) ![](../../workflows/docs/badge.svg) ![](../../workflows/test/badge.svg) ![](../../workflows/fpga/badge.svg)
+# Planck Silicon — Euler E0
 
-# Tiny Tapeout Verilog Project Template
+Primer chip de Planck Silicon, la división de chips de Oblivion: un motor de
+multiplicación de matrices INT8 con arreglo sistólico y ReLU, es decir, una capa de
+red neuronal en hardware. Se fabrica con Tiny Tapeout (SkyWater 130 nm, tanda SKY26d).
 
-- [Read the documentation for project](docs/info.md)
+## Qué hay aquí
 
-## What is Tiny Tapeout?
+| Ruta | Qué es |
+| --- | --- |
+| `src/euler_pe.v` | La celda: un multiplicador-acumulador INT8 |
+| `src/euler_core.v` | El arreglo N×N, los búferes y el control de 8 comandos |
+| `src/project.v` | Los pines de Tiny Tapeout (`tt_um_planck_e0`) |
+| `test/test.py`, `test/tb.v`, `test/Makefile` | Pruebas cocotb que corre Tiny Tapeout |
+| `info.yaml`, `docs/info.md` | Información del proyecto y hoja de datos |
 
-Tiny Tapeout is an educational project that aims to make it easier and cheaper than ever to get your digital and analog designs manufactured on a real chip.
+## Resultados de verificación (22 nov 2026)
 
-To learn more and get started, visit https://tinytapeout.com.
+- Simulación del circuito: 301 pruebas en 2×2 y 4×4, 0 errores.
+- Pruebas cocotb: 2 de 2 pasan (64 multiplicaciones verificadas).
+- Síntesis 2×2 en SKY130: 2,473 celdas, 18,584 µm².
+- Simulación con compuertas reales: 151 pruebas, 0 errores.
+- Plano físico propio con OpenROAD: 211 × 211 µm, 52% de uso, holgura de +11.1 ns a 50 MHz.
 
-## Set up your Verilog project
+El GDS oficial, la verificación de reglas (DRC/LVS) y la prueba a nivel de compuertas
+los genera la acción `gds` de este repositorio.
 
-1. Add your Verilog files to the `src` folder.
-2. Edit the [info.yaml](info.yaml) and update information about your project, paying special attention to the `source_files` and `top_module` properties. If you are upgrading an existing Tiny Tapeout project, check out our [online info.yaml migration tool](https://tinytapeout.github.io/tt-yaml-upgrade-tool/).
-3. Edit [docs/info.md](docs/info.md) and add a description of your project.
-4. Adapt the testbench to your design. See [test/README.md](test/README.md) for more information.
-
-The GitHub action will automatically build the ASIC files using [LibreLane](https://www.zerotoasiccourse.com/terminology/librelane/).
-
-## Enable GitHub actions to build the results page
-
-- [Enabling GitHub Pages](https://tinytapeout.com/faq/#my-github-action-is-failing-on-the-pages-part)
-
-## Resources
-
-- [FAQ](https://tinytapeout.com/faq/)
-- [Digital design lessons](https://tinytapeout.com/digital_design/)
-- [Learn how semiconductors work](https://tinytapeout.com/siliwiz/)
-- [Join the community](https://tinytapeout.com/discord)
-- [Build your design locally](https://www.tinytapeout.com/guides/local-hardening/)
-
-## What next?
-
-- [Submit your design to the next shuttle](https://app.tinytapeout.com/).
-- Edit [this README](README.md) and explain your design, how it works, and how to test it.
-- Share your project on your social network of choice:
-  - LinkedIn [#tinytapeout](https://www.linkedin.com/search/results/content/?keywords=%23tinytapeout) [@TinyTapeout](https://www.linkedin.com/company/100708654/)
-  - Mastodon [#tinytapeout](https://chaos.social/tags/tinytapeout) [@matthewvenn](https://chaos.social/@matthewvenn)
-  - X (formerly Twitter) [#tinytapeout](https://twitter.com/hashtag/tinytapeout) [@tinytapeout](https://twitter.com/tinytapeout)
-  - Bluesky [@tinytapeout.com](https://bsky.app/profile/tinytapeout.com)
+Software: el chip se programa con Hilbert, la plataforma de software de Planck Silicon.
